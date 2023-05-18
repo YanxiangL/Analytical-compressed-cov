@@ -1,1 +1,3 @@
 This folder contains the code that calculates the analytical covariance matrix. The random files are too big to upload here, but the links to these files are in my paper. 
+First, you need to convert the random files all to fits files because that's what Nbodykit reads in. I have upload a code here to convert the 6dFGS random file to the fits file. You can do the same for other surveys. 
+Secondly, run the 
