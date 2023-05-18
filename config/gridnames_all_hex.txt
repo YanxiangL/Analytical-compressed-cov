@@ -1,0 +1,9 @@
+redbin0_flat_6dFGS
+redbin0_NGC_flat_BOSS
+redbin0_SGC_flat_BOSS
+redbin1_NGC_flat_BOSS
+redbin1_SGC_flat_BOSS
+redbin0_flat_eBOSS_LRG
+redbin1_flat_eBOSS_LRG
+redbin0_flat_eBOSS_QSO
+redbin1_flat_eBOSS_QSO

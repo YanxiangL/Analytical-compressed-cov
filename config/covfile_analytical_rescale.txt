@@ -1,0 +1,6 @@
+../data/6dFGS_DR3_FullShape/cov_6dFGS_analytical_rescale.txt
+../data/BOSS_DR12_FullShape/cov_BOSS_z1_z2_NGC_SGC_analytical_rescale.txt
+../data/eBOSS_DR16_FullShape/cov_eBOSS_LRG_NGC_z1_analytical_rescale.txt
+../data/eBOSS_DR16_FullShape/cov_eBOSS_LRG_SGC_z1_analytical_rescale.txt
+../data/eBOSS_DR16_FullShape/cov_eBOSS_QSO_NGC_z1_analytical_rescale.txt
+../data/eBOSS_DR16_FullShape/cov_eBOSS_QSO_SGC_z1_analytical_rescale.txt
