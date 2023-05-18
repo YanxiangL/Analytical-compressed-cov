@@ -1,1 +1,2 @@
-This folder contains the derivative of the power spectrum with respect to the cosmological parameters for my paper. 
+This folder contains the power spectrum and the derivative of the power spectrum with respect to the cosmological parameters for my paper. 
+If you use a different survey, you can calculate the deriative numerically with the findiff package. 
