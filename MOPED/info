@@ -1,1 +1,1 @@
-This folder contains the code to compute the MOPED compression. 
+Run this code with the config files starting "tbird" in this directory to generate the MOPED compression matrix. The same config file is used to run the code.  
