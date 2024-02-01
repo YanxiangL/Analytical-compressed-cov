@@ -527,19 +527,45 @@ if __name__ == "__main__":
     #This determine which patch of the survey we will calculate the covariance matrix for
     job_num = int(sys.argv[2])
     #The skycut parameter from the montepython routine. 
+    guess = int(sys.argv[3])
+    
+    option = int(sys.argv[4])
+    
+    if guess == 1:
+        keyword = '_guess_'
+    else:
+        keyword = '_best_'
     
     pardict = input_variable(configfile)
     k_num = pardict['k_bin']
     kmax = pardict['k_max']
-    Omega_cdmh2 = pardict['omega_cdm']
-    Omega_bh2 = pardict['omega_b']
-    h = pardict['h']
-    log_10_10_As = pardict['ln_10_10_As']
     red_num = pardict['red_num']
     hem_num = pardict['hem_num']
     kbinwidth = kmax/k_num
     survey_name = pardict['name']
     
+    # if option == 0:
+    #     pardict['option'] = 'Anal'
+    # elif option == 1:
+    #     pardict['option'] = 'Anal_comp'
+    # elif option == 2:
+    #     pardict['option'] = 'Anal_comp_taylor'
+    # else:
+    #     raise Exception('Incorrect option in the config file.')
+        
+    if option == 0:
+        pardict['option'] = 'Anal'
+    elif option == 1:
+        pardict['option'] = 'Anal_comp'
+    elif option == 2:
+        pardict['option'] = 'Anal_comp_taylor'    
+    elif option == 3:
+        pardict['option'] = 'Anal_guess'
+    elif option == 4:
+        pardict['option'] = 'Anal_comp_guess'
+    else:
+        raise Exception('Incorrect option in the config file.')
+        
     #The BOSS survey has 3 different redshift bins on each hemisphere. You may need to change this if you are using a different survey.
     hemisphere, red_bin = divmod(job_num, red_num)
     
@@ -554,259 +580,331 @@ if __name__ == "__main__":
         dire_1 = 'SGC' + '_' + str(red_bin)
         dire_2 = 'SGC'
     
-    #Read in the Gaussian window kernels. 
-    Wij = np.zeros((k_num, 7, 15, 6))
-    for i in range(k_num):
-        # name = '/data/s4479813/window/window_kernel_' + dire_1 + '_bin_' + str(i) + '_' + survey_name +'Wij.npy'
-        
-        name = './resource/window_kernel_' + dire_1 + '_bin_' + str(i) + '_' + survey_name +'Wij.npy'
-        Wij[i] = np.load(name)
-        # print(np.shape(Wij[i]))
     
-    #Here, we will assume the same kmin, kmax for mono-, quadru- and hexadeca-pole. 
-    nbins = k_num
-    k_min = kbinwidth/2.0
-    k_max = kmax - kbinwidth/2.0
-    k = np.linspace(k_min, k_max, nbins)
-    kbins = len(k)
-    print(k)
-    # kmode_file = str('/data/s4479813/pybird-desi/model_PS/kmode_' + dire_1 + '_' + survey_name + '.npy')
-    kmode_file = str('./resource/kmode_' + dire_1 + '_' + survey_name + '.npy')
-    
-    # PS_file = str("/data/s4479813/pybird-desi/model_PS/PS_MP_" + dire_1 + '_' + survey_name + "model.npy")
-    PS_file = str("./resource/PS_MP_" + dire_1 + '_' + survey_name + "model.npy")
-    
-    kmode = np.load(kmode_file)
-    PS_data = np.load(PS_file)
-    k_length = np.int32(len(kmode)/3)
-    model_all = []
-    for i in range(3):
-        kmode_pole = kmode[i*k_length:(i+1)*k_length]
-        PS_data_pole = PS_data[i*k_length:(i+1)*k_length]
-        model = InterpolatedUnivariateSpline(kmode_pole, PS_data_pole)
-        model_all.append(model(k))    
-        
-    Pfit = [0, 0, 0, 0, 0]
-    Pfit[0] = model_all[0]
-    Pfit[2] = model_all[1]
-    Pfit[4] = model_all[2]
-    
-    print(np.shape(Pfit[0]), np.shape(Pfit[2]), np.shape(Pfit[4]))
-    
-    
-    # Calculate the fiducial matter density. 
-    Om = (Omega_bh2 + Omega_cdmh2)/h**2
-    z = redshift
-    
-    try:
-        bias_params = pardict['bias'][job_num]
-        
-        b1 = bias_params[0]
-        #beta = f/b1, zero for real space. This is the redshift space distortion parameter. 
-        
-        # b1EFT = b1
-        b2EFT = bias_params[1]
-        b3EFT = bias_params[2]
-        b4EFT = bias_params[3]
-        
-    except:
-        bias_params = pardict['bias']
-        
-        b1 = bias_params[0]
-        #beta = f/b1, zero for real space. This is the redshift space distortion parameter. 
-        
-        # b1EFT = b1
-        b2EFT = bias_params[1]
-        b3EFT = bias_params[2]
-        b4EFT = bias_params[3]
-    
-    print(bias_params)
-    
-    be = fgrowth(z, Om)/b1
-    
-    # g2 = -2/7*(b1 - 1)
-    # b2 = 0.0
-    # g3 = 11/63*(b1 - 1);
-    # # b2 = 0.412 - 2.143*b1 + 0.929*b1**2 + 0.008*b1**3
-     
-    # g2x = -2/7*b2;
-    # g21 = -22/147*(b1 - 1);
-    # # b3 = -1.028 + 7.646*b1 - 6.227*b1**2 + 0.912*b1**3
-    # b3 = -1.028 + 7.646*b1 - 6.227*b1**2 + 0.912*b1**3 + 4*g2x - 4/3*g3 - 8/3*g21 - 32/21*g2
-    
-    
-    # g2 = 2.0/7.0*(b2EFT-b1)
-    g2 = -2.0/7.0*(b1 - 1.0)
-    # b2 = 2.0*(b4EFT+7.0/2.0*g2)
-    # b2 = 0.0
-    b2 = 0.412 - 2.143*b1 + 0.929*b1**2 + 0.008*b1**3 + 4/3*g2
-    # b2 = 0.412 - 2.143*b1 + 0.929*b1**2 + 0.008*b1**3
-    # b2 = 0.0
-    # bg3 = 1.0/6.0*((b3EFT-b1)/2.0-15.0*g2)
-    # bg3 = (b3EFT-b1)/12.0 - 2.5*g2
-    
-    # # test = find_best_fit()
-    
-    # # c5, c6, c7, c8, c9, g2x,g21,b3 = test.x
-    
-    # g2x = 0.0
-    g2x = -2/7.*b2;
-    g21 = -22/147.*(b1 - 1);
-    # g21 = (b3EFT - b1 - 30.0*g2)/12.0
-    g3 = 11/63.*(b1 - 1);
-    b3 = -1.028 + 7.646*b1 - 6.227*b1**2 + 0.912*b1**3 + 4*g2x - 4/3.*g3 - 8/3.*g21 - 32/21.*g2
-    # b3 = 0.0
-    
-    # b3 = -1.028 + 7.646*b1 - 6.227*b1**2 + 0.912*b1**3 + 4*g2x + 796.0/1323.0*(b1-1)
-    # b3 = -3.0*b2
-    # b3 = 0.0
-    # b3 = -1.028 + 7.646*b1 - 6.227*b1**2 + 0.912*b1**3
-    
-    # g2x = 0.0
-    # g21 = 0.0
-    # b3 = 0.0
-    # g3 = 0.0
-
-    T0.InitParameters([b1,be,g2,b2,0.0,g2x,g21,b3])
-    
-    # T0.InitParameters([b1,be,g2,b2,bg3])
-    
-    # print(g2, b2, bg3)
-    
-    scalar_amplitude = np.exp(log_10_10_As)/10**10
-    my_cosmology, run, TT, EE, BB, TE, Pk_interpolator, fsigma8, sigma8_0 = power_spectrum(Omega_bh2 = Omega_bh2, Omega_cdmh2= Omega_cdmh2, H0 = 100*h,
-    scalar_amplitude = scalar_amplitude)
-    k_mode = np.logspace(-5, np.log10(kmax), 10000)
-    #Find the power spectrum at redshift zero. 
-    pdata = Pk_interpolator.P(0.0, k_mode)
-    
-    #Interpolate the power spectrum at the effective redshift. 
-    Plin=InterpolatedUnivariateSpline(k_mode, Dz(redshift, Om)**2*b1**2*pdata)
-    
-    # Derivatives of the linear power spectrum
-    dlnPk=derivative(Plin,k,dx=1e-4)*k/Plin(k)
-    
-    alpha = pardict['alpha'] 
-    #The random catalogue I am using is 50 times bigger than the actual catalogue. alpha = Ng/Nr where Nr is the number
-    #of galaxies in the random catalogue. 
-    
-    #Read in the pre-computed normalization factors.
-    # file = '/data/s4479813/Normalization_' + dire_1 + '_' + survey_name +'.npy'
-    file = './resource/Normalization_' + dire_1 + '_' + survey_name +'.npy'
-    i22, i12, i11, i10, i24, i14, i34, i44, i32, i12oi22 = np.load(file)
-    
-    #The normalization needs to be corrected for the number of galaxies in the data catalogue. 
-    
-    i22 = i22*alpha
-    i12 = i12*alpha
-    i11 = i11*alpha
-    i10 = i10*alpha
-    i24 = i24*alpha
-    i14 = i14*alpha
-    i34 = i34*alpha
-    i44 = i44*alpha
-    i32 = i32*alpha
-
-    # _=np.load('/data/s4479813/FFT/SSC_window_kernel' + dire_1+ '_' + survey_name + '.npy')
-    
-    _=np.load('./resource/SSC_window_kernel' + dire_1+ '_' + survey_name + '.npy')
-    
-    delete_index = np.where(np.isnan(_))
-    if (len(delete_index[1]) != 0):
-        _ = np.delete(_, np.unique(delete_index[1]), axis = 1)
-    
-    kwin = _[0]; powW22 = _[1:7]; powW10 = _[7:13]; powW22x10 = _[13:]
-    
-    [temp,temp2]=np.zeros((2,6)); temp3 = np.zeros(9)
-    
-    print("Finish reading in all pre-computed data.")
-    
-    #This part calculates equation (65), (68) and (78) in https://arxiv.org/pdf/1910.02914.pdf .
-    
-    start = time.time()
-    for i in range(9):
-        Pwin=InterpolatedUnivariateSpline(kwin, powW22x10[i])
-        temp3[i]=quad(lambda q: q**2*Plin(q)*Pwin(q)/2/pi**2, 0, kwin[-1], epsabs = 0.0, epsrel=1.0e-6, limit=500)[0]
-
-        if(i<6):
-            Pwin=InterpolatedUnivariateSpline(kwin, powW22[i])
-            temp[i]=quad(lambda q: q**2*Plin(q)*Pwin(q)/2/pi**2, 0, kwin[-1], epsabs = 0.0, epsrel=1.0e-6, limit=500)[0]
-            Pwin=InterpolatedUnivariateSpline(kwin, powW10[i])
-            temp2[i]=quad(lambda q: q**2*Plin(q)*Pwin(q)/2/pi**2, 0, kwin[-1], epsabs = 0.0, epsrel=1.0e-6, limit=500)[0]
-        else:
-            continue
-    
-    end = time.time()
-    print("It takes " + str(end - start) + " seconds to finish the integration.")
-    
-    sigma22Sq = MatrixForm(temp); sigma10Sq = MatrixForm(temp2); sigma22x10 = MatrixForm(temp3)
-    
-    # Kaiser terms
-    rsd=np.zeros(5)
-    rsd[0]=1 + (2*be)/3 + be**2/5
-    rsd[2]=(4*be)/3 + (4*be**2)/7
-    rsd[4]=(8*be**2)/35
-    
-    Z12Multipoles = np.vectorize(Z12Multipoles)
-
-    # Terms used in the LA calculation
-    covaLAterm=np.zeros((3,len(k)))
-    for l in range(3):
-        for i in range(3):
-            for j in range(3):
-                covaLAterm[l]+=1/4.*sigma22x10[i,j]*Z12Multipoles(2*i,2*l,dlnPk)\
-                *quad(lambda mu: lp(2*j,mu)*(1 + be*mu**2), -1, 1)[0]
+    if (option != 0) and (option != 3) and guess == 1:
+        if option == 1 or option == 2:
+            print('Copy the analytical covariance matrix with fiducial parameters.')
                 
-    print("Finish computing the local average covariance matrix.")
-    
-    start = time.time()
-    covaSSCmult=np.zeros((2*kbins,2*kbins))
-    covaSSCmult[:kbins,:kbins]=covaSSC(0,0)
-    covaSSCmult[kbins:,kbins:]=covaSSC(2,2)
-    covaSSCmult[:kbins,kbins:]=covaSSC(0,2); 
-    covaSSCmult[kbins:,:kbins]=np.transpose(covaSSCmult[:kbins,kbins:])
-    end = time.time()
-    print("It takes " + str(end - start) + " seconds to finish computing the super survey covariance matrix")
-    
-    start = time.time()
-    covaG = CovMatGauss()
-    end = time.time()
-    print("It takes " + str(end-start) + " seconds to compute the Gaussian part of the covariance matrix.")
-    
-    # Constructing multipole covariance
-    # Warning: the trispectrum takes a while to run
+            input_keyword = 'Anal'
+        elif option == 4:
+            print('Copy the analytical covariance matrix with guess parameters.')
+           
+            input_keyword = 'Anal_guess'
+            
+        input_1 = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_SPT_UV_sub_' + dire_1 + '_' + survey_name + keyword + input_keyword + '.npy'
         
-    #Start calculating the EFT covariance matrix with the UV subtraction. 
-    covaT0_EFT_newmult=np.zeros((2*kbins,2*kbins))
-    trisp = np.vectorize(trisp)
+        input_G = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_Gaussian' + dire_1 + '_' + survey_name + keyword + input_keyword + '.npy'
+        input_SSC = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_SSC' + dire_1 + '_' + survey_name + keyword + input_keyword + '.npy'
+        input_T0_1 = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_T0_SPT_UV_sub' + dire_1 + '_' + survey_name + keyword + input_keyword + '.npy'
+        
+        covaAnl = np.load(input_1)
+        covaG = np.load(input_G)
+        covaSSCmult = np.load(input_SSC)
+        covaT0_EFT_newmult = np.load(input_T0_1)
+        
+        output_1 = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_SPT_UV_sub_' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        
+        output_G = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_Gaussian' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        output_SSC = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_SSC' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        output_T0_1 = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_T0_SPT_UV_sub' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        
+        
+        np.save(output_1, covaAnl)
+        np.save(output_G, covaG)
+        np.save(output_SSC, covaSSCmult)
+        np.save(output_T0_1, covaT0_EFT_newmult)
+        
+    else:
+            
+        if guess == 0:
+            # bestfits = np.load('./resource/bestfit_marg_' + pardict['option'] + '.npy')
+            bestfits = np.load(str('/data/s4479813/pybird-desi/model_PS/bestfit_marg_' + pardict['option'] + '.npy'))
+            log_10_10_As = bestfits[0]
+            h = bestfits[1]
+            Omega_cdmh2 = bestfits[2]
+            Omega_bh2 = bestfits[3]
+            
+            mock_index = np.int16(pardict['mock_index'])
+            if (red_num == 1 and hem_num == 1):
+                index = mock_index
+            else:
+                index = mock_index[job_num]
+                
+            b1 = bestfits[4 + index*10]
+            
+        else:
+            if option < 2.5:
+                log_10_10_As, h, Omega_bh2, Omega_cdmh2 = np.float64(pardict['fiducial'])
+            else:
+                Omega_cdmh2 = pardict['omega_cdm']
+                Omega_bh2 = pardict['omega_b']
+                h = pardict['h']
+                log_10_10_As = pardict['ln_10_10_As']
+            
+            try: 
+                b1 = pardict['bias'][0][0]
+            except:
+                b1 = pardict['bias'][0]
+                
+        print(dire_1, log_10_10_As, h, Omega_cdmh2, Omega_bh2, b1)
+            
+        # print(log_10_10_As, h, Omega_cdmh2, Omega_bh2, b1)
+        
+        #Read in the Gaussian window kernels. 
+        Wij = np.zeros((k_num, 7, 15, 6))
+        for i in range(k_num):
+            name = '/data/s4479813/window/window_kernel_' + dire_1 + '_bin_' + str(i) + '_' + survey_name +'Wij.npy'
+            
+            # name = './resource/window_kernel_' + dire_1 + '_bin_' + str(i) + '_' + survey_name +'Wij.npy'
+            Wij[i] = np.load(name)
+            # print(np.shape(Wij[i]))
+        
+        #Here, we will assume the same kmin, kmax for mono-, quadru- and hexadeca-pole. 
+        nbins = k_num
+        k_min = kbinwidth/2.0
+        k_max = kmax - kbinwidth/2.0
+        k = np.linspace(k_min, k_max, nbins)
+        kbins = len(k)
+        print(k)
+        kmode_file = str('/data/s4479813/pybird-desi/model_PS/kmode_' + dire_1 + '_' + survey_name + '.npy')
+        # kmode_file = str('./resource/kmode_' + dire_1 + '_' + survey_name + '.npy')
+        
+        PS_file = str("/data/s4479813/pybird-desi/model_PS/PS_MP_" + dire_1 + '_' + survey_name + keyword + "model_" + pardict['option'] + ".npy")
+        # PS_file = str("./resource/PS_MP_" + dire_1 + '_' + survey_name + keyword + "model_" + pardict['option'] + ".npy")
+        
+        kmode = np.load(kmode_file)
+        PS_data = np.load(PS_file)
+        k_length = np.int32(len(kmode)/3)
+        model_all = []
+        for i in range(3):
+            kmode_pole = kmode[i*k_length:(i+1)*k_length]
+            PS_data_pole = PS_data[i*k_length:(i+1)*k_length]
+            model = InterpolatedUnivariateSpline(kmode_pole, PS_data_pole)
+            model_all.append(model(k))    
+            
+        Pfit = [0, 0, 0, 0, 0]
+        Pfit[0] = model_all[0]
+        Pfit[2] = model_all[1]
+        Pfit[4] = model_all[2]
+        
+        print(np.shape(Pfit[0]), np.shape(Pfit[2]), np.shape(Pfit[4]))
+        
+        
+        # Calculate the fiducial matter density. 
+        Om = (Omega_bh2 + Omega_cdmh2)/h**2
+        z = redshift
+        
+        # try:
+        #     bias_params = pardict['bias'][job_num]
+            
+        #     b1 = bias_params[0]
+        #     #beta = f/b1, zero for real space. This is the redshift space distortion parameter. 
+            
+        #     # b1EFT = b1
+        #     b2EFT = bias_params[1]
+        #     b3EFT = bias_params[2]
+        #     b4EFT = bias_params[3]
+            
+        # except:
+        #     bias_params = pardict['bias']
+            
+        #     b1 = bias_params[0]
+        #     #beta = f/b1, zero for real space. This is the redshift space distortion parameter. 
+            
+        #     # b1EFT = b1
+        #     b2EFT = bias_params[1]
+        #     b3EFT = bias_params[2]
+        #     b4EFT = bias_params[3]
+        
+        # print(bias_params)
+        
+        be = fgrowth(z, Om)/b1
+        
+        # g2 = -2/7*(b1 - 1)
+        # b2 = 0.0
+        # g3 = 11/63*(b1 - 1);
+        # # b2 = 0.412 - 2.143*b1 + 0.929*b1**2 + 0.008*b1**3
+         
+        # g2x = -2/7*b2;
+        # g21 = -22/147*(b1 - 1);
+        # # b3 = -1.028 + 7.646*b1 - 6.227*b1**2 + 0.912*b1**3
+        # b3 = -1.028 + 7.646*b1 - 6.227*b1**2 + 0.912*b1**3 + 4*g2x - 4/3*g3 - 8/3*g21 - 32/21*g2
+        
+        
+        # g2 = 2.0/7.0*(b2EFT-b1)
+        g2 = -2.0/7.0*(b1 - 1.0)
+        # b2 = 2.0*(b4EFT+7.0/2.0*g2)
+        # b2 = 0.0
+        b2 = 0.412 - 2.143*b1 + 0.929*b1**2 + 0.008*b1**3 + 4/3*g2
+        # b2 = 0.412 - 2.143*b1 + 0.929*b1**2 + 0.008*b1**3
+        # b2 = 0.0
+        # bg3 = 1.0/6.0*((b3EFT-b1)/2.0-15.0*g2)
+        # bg3 = (b3EFT-b1)/12.0 - 2.5*g2
+        
+        # # test = find_best_fit()
+        
+        # # c5, c6, c7, c8, c9, g2x,g21,b3 = test.x
+        
+        # g2x = 0.0
+        g2x = -2/7.*b2;
+        g21 = -22/147.*(b1 - 1);
+        # g21 = (b3EFT - b1 - 30.0*g2)/12.0
+        g3 = 11/63.*(b1 - 1);
+        b3 = -1.028 + 7.646*b1 - 6.227*b1**2 + 0.912*b1**3 + 4*g2x - 4/3.*g3 - 8/3.*g21 - 32/21.*g2
+        # b3 = 0.0
+        
+        # b3 = -1.028 + 7.646*b1 - 6.227*b1**2 + 0.912*b1**3 + 4*g2x + 796.0/1323.0*(b1-1)
+        # b3 = -3.0*b2
+        # b3 = 0.0
+        # b3 = -1.028 + 7.646*b1 - 6.227*b1**2 + 0.912*b1**3
+        
+        # g2x = 0.0
+        # g21 = 0.0
+        # b3 = 0.0
+        # g3 = 0.0
     
-    start = time.time()
-    for i in range(len(k)):
-        covaT0_EFT_newmult[i,:kbins]=trisp(0,0,k[i],k)
-        covaT0_EFT_newmult[i,kbins:]=trisp(0,2,k[i],k)
-        covaT0_EFT_newmult[kbins+i,kbins:]=trisp(2,2,k[i],k)
+        T0.InitParameters([b1,be,g2,b2,0.0,g2x,g21,b3])
+        
+        # T0.InitParameters([b1,be,g2,b2,bg3])
+        
+        # print(g2, b2, bg3)
+        
+        scalar_amplitude = np.exp(log_10_10_As)/10**10
+        my_cosmology, run, TT, EE, BB, TE, Pk_interpolator, fsigma8, sigma8_0 = power_spectrum(Omega_bh2 = Omega_bh2, Omega_cdmh2= Omega_cdmh2, H0 = 100*h,
+        scalar_amplitude = scalar_amplitude)
+        k_mode = np.logspace(-5, np.log10(kmax), 10000)
+        #Find the power spectrum at redshift zero. 
+        pdata = Pk_interpolator.P(0.0, k_mode)
+        
+        #Interpolate the power spectrum at the effective redshift. 
+        Plin=InterpolatedUnivariateSpline(k_mode, Dz(redshift, Om)**2*b1**2*pdata)
+        
+        # Derivatives of the linear power spectrum
+        dlnPk=derivative(Plin,k,dx=1e-4)*k/Plin(k)
+        
+        alpha = pardict['alpha'] 
+        #The random catalogue I am using is 50 times bigger than the actual catalogue. alpha = Ng/Nr where Nr is the number
+        #of galaxies in the random catalogue. 
+        
+        #Read in the pre-computed normalization factors.
+        file = '/data/s4479813/Normalization_' + dire_1 + '_' + survey_name +'.npy'
+        # file = './resource/Normalization_' + dire_1 + '_' + survey_name +'.npy'
+        i22, i12, i11, i10, i24, i14, i34, i44, i32, i12oi22 = np.load(file)
+        
+        #The normalization needs to be corrected for the number of galaxies in the data catalogue. 
+        
+        i22 = i22*alpha
+        i12 = i12*alpha
+        i11 = i11*alpha
+        i10 = i10*alpha
+        i24 = i24*alpha
+        i14 = i14*alpha
+        i34 = i34*alpha
+        i44 = i44*alpha
+        i32 = i32*alpha
     
-    covaT0_EFT_newmult[kbins:,:kbins]=np.transpose(covaT0_EFT_newmult[:kbins,kbins:])
+        _=np.load('/data/s4479813/FFT/SSC_window_kernel' + dire_1+ '_' + survey_name + '.npy')
+        
+        # _=np.load('./resource/SSC_window_kernel' + dire_1+ '_' + survey_name + '.npy')
+        
+        delete_index = np.where(np.isnan(_))
+        if (len(delete_index[1]) != 0):
+            _ = np.delete(_, np.unique(delete_index[1]), axis = 1)
+        
+        kwin = _[0]; powW22 = _[1:7]; powW10 = _[7:13]; powW22x10 = _[13:]
+        
+        [temp,temp2]=np.zeros((2,6)); temp3 = np.zeros(9)
+        
+        print("Finish reading in all pre-computed data.")
+        
+        # raise Exception('Test complete.')
+        
+        #This part calculates equation (65), (68) and (78) in https://arxiv.org/pdf/1910.02914.pdf .
+        
+        start = time.time()
+        for i in range(9):
+            Pwin=InterpolatedUnivariateSpline(kwin, powW22x10[i])
+            temp3[i]=quad(lambda q: q**2*Plin(q)*Pwin(q)/2/pi**2, 0, kwin[-1], epsabs = 0.0, epsrel=1.0e-6, limit=500)[0]
     
-    end = time.time()
-    print("It takes " + str(end - start) + " seconds to finish the trispectrum T0_EFT_new calculation.")
+            if(i<6):
+                Pwin=InterpolatedUnivariateSpline(kwin, powW22[i])
+                temp[i]=quad(lambda q: q**2*Plin(q)*Pwin(q)/2/pi**2, 0, kwin[-1], epsabs = 0.0, epsrel=1.0e-6, limit=500)[0]
+                Pwin=InterpolatedUnivariateSpline(kwin, powW10[i])
+                temp2[i]=quad(lambda q: q**2*Plin(q)*Pwin(q)/2/pi**2, 0, kwin[-1], epsabs = 0.0, epsrel=1.0e-6, limit=500)[0]
+            else:
+                continue
+        
+        end = time.time()
+        print("It takes " + str(end - start) + " seconds to finish the integration.")
+        
+        sigma22Sq = MatrixForm(temp); sigma10Sq = MatrixForm(temp2); sigma22x10 = MatrixForm(temp3)
+        
+        # Kaiser terms
+        rsd=np.zeros(5)
+        rsd[0]=1 + (2*be)/3 + be**2/5
+        rsd[2]=(4*be)/3 + (4*be**2)/7
+        rsd[4]=(8*be**2)/35
+        
+        Z12Multipoles = np.vectorize(Z12Multipoles)
     
-    covaNG=covaT0_EFT_newmult+covaSSCmult
-    covaAnl=covaG+covaNG
-    
-    # output_1 = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_SPT_UV_sub_' + dire_1 + '_' + survey_name + '.npy'
-    
-    # output_G = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_Gaussian' + dire_1 + '_' + survey_name + '.npy'
-    # output_SSC = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_SSC' + dire_1 + '_' + survey_name + '.npy'
-    # output_T0_1 = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_T0_SPT_UV_sub' + dire_1 + '_' + survey_name + '.npy'
-    
-    output_1 = './ACM_SPT_UV_sub_' + dire_1 + '_' + survey_name + '.npy'
-    
-    output_G = './ACM_Gaussian' + dire_1 + '_' + survey_name + '.npy'
-    output_SSC = './ACM_SSC' + dire_1 + '_' + survey_name + '.npy'
-    output_T0_1 = './ACM_T0_SPT_UV_sub' + dire_1 + '_' + survey_name + '.npy'
-    
-    np.save(output_1, covaAnl)
-    np.save(output_G, covaG)
-    np.save(output_SSC, covaSSCmult)
-    np.save(output_T0_1, covaT0_EFT_newmult)
+        # Terms used in the LA calculation
+        covaLAterm=np.zeros((3,len(k)))
+        for l in range(3):
+            for i in range(3):
+                for j in range(3):
+                    covaLAterm[l]+=1/4.*sigma22x10[i,j]*Z12Multipoles(2*i,2*l,dlnPk)\
+                    *quad(lambda mu: lp(2*j,mu)*(1 + be*mu**2), -1, 1)[0]
+                    
+        print("Finish computing the local average covariance matrix.")
+        
+        start = time.time()
+        covaSSCmult=np.zeros((2*kbins,2*kbins))
+        covaSSCmult[:kbins,:kbins]=covaSSC(0,0)
+        covaSSCmult[kbins:,kbins:]=covaSSC(2,2)
+        covaSSCmult[:kbins,kbins:]=covaSSC(0,2); 
+        covaSSCmult[kbins:,:kbins]=np.transpose(covaSSCmult[:kbins,kbins:])
+        end = time.time()
+        print("It takes " + str(end - start) + " seconds to finish computing the super survey covariance matrix")
+        
+        start = time.time()
+        covaG = CovMatGauss()
+        end = time.time()
+        print("It takes " + str(end-start) + " seconds to compute the Gaussian part of the covariance matrix.")
+        
+        # Constructing multipole covariance
+        # Warning: the trispectrum takes a while to run
+            
+        #Start calculating the EFT covariance matrix with the UV subtraction. 
+        covaT0_EFT_newmult=np.zeros((2*kbins,2*kbins))
+        trisp = np.vectorize(trisp)
+        
+        start = time.time()
+        for i in range(len(k)):
+            covaT0_EFT_newmult[i,:kbins]=trisp(0,0,k[i],k)
+            covaT0_EFT_newmult[i,kbins:]=trisp(0,2,k[i],k)
+            covaT0_EFT_newmult[kbins+i,kbins:]=trisp(2,2,k[i],k)
+        
+        covaT0_EFT_newmult[kbins:,:kbins]=np.transpose(covaT0_EFT_newmult[:kbins,kbins:])
+        
+        end = time.time()
+        print("It takes " + str(end - start) + " seconds to finish the trispectrum T0_EFT_new calculation.")
+        
+        covaNG=covaT0_EFT_newmult+covaSSCmult
+        covaAnl=covaG+covaNG
+        
+        output_1 = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_SPT_UV_sub_' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        
+        output_G = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_Gaussian' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        output_SSC = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_SSC' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        output_T0_1 = '/data/s4479813/pybird-desi/BOSS_DR12_FullShape/ACM_T0_SPT_UV_sub' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        
+        # output_1 = './ACM_SPT_UV_sub_' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        
+        # output_G = './ACM_Gaussian' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        # output_SSC = './ACM_SSC' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        # output_T0_1 = './ACM_T0_SPT_UV_sub' + dire_1 + '_' + survey_name + keyword + pardict['option'] + '.npy'
+        
+        np.save(output_1, covaAnl)
+        np.save(output_G, covaG)
+        np.save(output_SSC, covaSSCmult)
+        np.save(output_T0_1, covaT0_EFT_newmult)

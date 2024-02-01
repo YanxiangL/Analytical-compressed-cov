@@ -1,7 +1,17 @@
-This folder contains the code that calculates the analytical covariance matrix. The random files are too big to upload here, but the links to these files are in my paper. 
-First, you need to convert the random files all to fits files because that's what Nbodykit reads in. I have upload a code here to convert the 6dFGS random file to the fits file. You can do the same for other surveys. 
-Secondly, run the FFT_Nbodykit_openmp.py to find the all FFT kernels that will be used to calculate the Guassian and SSC covariance matrix. 
-Then run the window_kernel_Gaussian to calculate the Gaussian part of the covariance matrix. 
+This folder contains the code that calculates the analytical covariance matrix. The random files are too big to upload here, but the links to these files can be found in their respective papers. 
+
+First, you need to convert the random files all to fits files because that's what Nbodykit reads in. I have upload a code here (create_input_fits_6dFGS.py) to convert the 6dFGS random file to the fits file. You can do the same for other surveys. 
+
+Secondly, run the FFT_Nbodykit_openmp.py to find the all FFT kernels that will be used to calculate the Guassian and SSC covariance matrix. I have also attached the config file for each survey here. See the comments within the config file and the code to see what you need to change if you want to apply for a different survey. You will need the same config file to calculate the Gaussian, SSC, and the full covariance matrix in the next 3 steps. 
+ 
+Then run the window_kernel_Gaussian.py to calculate the Gaussian part of the covariance matrix. 
+
 At the same time, you should run SSC_window_power_spectra.py to find the SSC covariance matrix. 
+
 Lastly, run covariance_SPT.py to find the final analytical covariance matrix. 
-The ini files are the configuration files required to run the code. 
+
+Due to the numerical error, your covariance matrix may not be semi-postive definite. You can use the cov_txt.py provided to find the nearest symmetric semi-positive definite matrix with the algorithm from https://www.sciencedirect.com/science/article/pii/0024379588902236. 
+
+You only need to rerun covariance_SPT.py when you change the cosmological parameters. 
+
+All codes in this work based on https://journals.aps.org/prd/abstract/10.1103/PhysRevD.102.123517. Please reference their works as well if you are using this code. 
