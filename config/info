@@ -1,4 +1,0 @@
-This folder contains the config files such as the grid names and the covariance matrices. You probably want to create similar files if you are using a different dataset. 
-If you are using PyBird, to generate the derivative of the power spectrum with respect to the cosmological parameters, you need to first use make_taylorgrid.py and checkglue.py in 
-https://github.com/CullanHowlett/pybird/tree/desi/tbird to calculate the power spectrum. Then you can use the computederivs.py to find the derivatives. If you are not using pybird, 
-to calculate the derivative numerically, you can use the findiff package. 
