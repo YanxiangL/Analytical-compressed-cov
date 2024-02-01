@@ -1,2 +1,2 @@
 This folder contains the power spectrum and the derivative of the power spectrum with respect to the cosmological parameters for my paper. 
-If you use a different survey, you can calculate the deriative numerically with the findiff package. 
+If you use a different survey, you can calculate the deriative numerically with the findiff package. Update: The total size of the files are too big to upload them to Github. If you need to grids, send an email and we will share the file with you
