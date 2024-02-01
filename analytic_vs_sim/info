@@ -1,1 +1,1 @@
-This folder contains the comparison between the analytical covariance matrix and the simulated covariance matrix. 
+This folder contains the comparison between the analytical covariance matrix and the simulated covariance matrix after the first iteration with the "template" initial parameters. This is with the analytical covariance matrix but without the compression. 
