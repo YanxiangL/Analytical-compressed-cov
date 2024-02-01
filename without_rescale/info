@@ -1,2 +1,0 @@
-This folder compares the constraints from the analytical covariance matrix with the simulated covaraince matrix and the compressed analytical covariance matrix. This is without the rescaling Beutler & McDonald
-(2021). Also the simulated covariance matrix contains the cross-covariance between different redshift bins. 
